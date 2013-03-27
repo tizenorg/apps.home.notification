@@ -77,6 +77,7 @@ then
 			text_dir TEXT,
 			time INTEGER default 0,  
 			insert_time INTEGER default 0,  
+			person_id INTEGER default 0,
 			args TEXT,  
 			group_args TEXT,  
 			b_execute_option TEXT,

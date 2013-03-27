@@ -46,6 +46,73 @@ extern "C" {
  */
 
 /**
+ * @brief This function sets a given person ID on a notification.
+ * @details
+ * @remarks
+ * @param[in] noti A notification handle
+ * @param[in] person_db_id The person ID to associate to @a noti
+ * @return #NOTIFICATION_ERROR_NONE on success, other values otherwise
+ * @retval #NOTIFICATION_ERROR_NONE - Success
+ * @retval #NOTIFICATION_ERROR_INVALID_DATA - Invalid parameter passed
+ * @pre Notification handle should be created by notification_new()
+ * @post
+ * @see notification_new()
+ * @par Sample code:
+ * @code
+#include <notification.h>
+...
+{
+	notification_h noti = NULL;
+	notification_error_e noti_err = NOTIFICATION_ERROR_NONE;
+
+	noti = notification_new(NOTIFICATION_TYPE_NOTI, APP_GROUP_ID,
+	                        NOTIFICATION_PRIV_ID_NONE);
+	if (!noti) return;
+
+	noti_err = notification_set_person(noti, person_db_id);
+	if (noti_err != NOTIFICATION_ERROR_NONE) {
+		notification_free(noti);
+		return;
+	}
+}
+ * @endcode
+ */
+notification_error_e notification_set_person(notification_h noti,
+                                              int person_db_id);
+
+/**
+ * @brief This function retrieves a person ID from a given notification.
+ * @details
+ * @remarks
+ * @param[in] noti notification handle
+ * @param[out] ret_person_db_id Returned person ID
+ * @return #NOTIFICATION_ERROR_NONE on success, other values otherwise
+ * @retval #NOTIFICATION_ERROR_NONE - Success
+ * @retval #NOTIFICATION_ERROR_INVALID_DATA - Invalid parameter passed
+ * @pre Notification handle should be created by notification_new()
+ * @post
+ * @see notification_new()
+ * @par Sample code:
+ * @warning If there was no previous person set on the notification,
+ *          @c 0 will be the value pointed by @a ret_person, but
+ *          #NOTIFICATION_ERROR_NONE is still returned.
+ * @code
+#include <notification.h>
+...
+{
+	int ret_person_db_id;
+	notification_error_e noti_err = NOTIFICATION_ERROR_NONE;
+
+	noti_err  = notification_get_person(noti, &ret_person_db_id);
+	if (noti_err != NOTIFICATION_ERROR_NONE || !ret_person_db_id)
+		return;
+}
+ * @endcode
+ */
+notification_error_e notification_get_person(notification_h noti,
+                                              int * ret_person_db_id);
+
+/**
  * @brief Set absolute path for image file to display on notification view
  * @details 
  * @remarks
@@ -1720,6 +1787,73 @@ notification_error_e notification_get_detail_list(const char *pkgname,
 						  int priv_id,
 						  int count,
 						  notification_list_h *list);
+
+/**
+ * @brief This function returns a notifications list comprised of
+ * notifications associated to a given person.
+ * @details If @a count is -1, @b all notifications matching the
+ * criteria on the database are returned, otherwise the list stops at
+ * @a count entries.
+ * @remarks
+ * @param[in] person_db_id Person id
+ * @param[in] count Maximum number of notifications to return in list
+ * @param[out] list Notification list handle
+ * @return #NOTIFICATION_ERROR_NONE on success, other values otherwise.
+ * @retval #NOTIFICATION_ERROR_NONE - Success
+ * @retval #NOTIFICATION_ERROR_INVALID_DATA - Invalid parameter passed
+ * @pre
+ * @post
+ * @see #notification_list_h
+ * @par Sample code:
+ * @code
+#include <notification.h>
+...
+{
+	notification_list_h noti_list = NULL;
+	notification_error_e noti_err = NOTIFICATION_ERROR_NONE;
+
+	noti_err = notification_get_person_list
+		(person_db_id, -1, &noti_list);
+	if (noti_err != NOTIFICATION_ERROR_NONE)
+		return;
+}
+ * @endcode
+ */
+notification_error_e notification_get_person_list(int person_db_id,
+                                                   int count,
+                                                   notification_list_h *list);
+
+/**
+ * @brief This function returns a list with <b>all notifications with
+ * person associated</b>.
+ * @details If @a count is -1, @b all notifications matching the
+ * criteria on the database are returned, otherwise the list stops at
+ * @a count entries.
+ * @remarks
+ * @param[in] count Maximum number of notifications to return in list
+ * @param[out] list Notification list handle
+ * @return #NOTIFICATION_ERROR_NONE on success, other values otherwise.
+ * @retval #NOTIFICATION_ERROR_NONE - Success
+ * @retval #NOTIFICATION_ERROR_INVALID_DATA - Invalid parameter passed
+ * @pre
+ * @post
+ * @see #notification_list_h
+ * @par Sample code:
+ * @code
+#include <notification.h>
+...
+{
+	notification_list_h noti_list = NULL;
+	notification_error_e noti_err = NOTIFICATION_ERROR_NONE;
+
+	noti_err = notification_get_with_person_list(-1, &noti_list);
+	if (noti_err != NOTIFICATION_ERROR_NONE)
+		return;
+}
+ * @endcode
+ */
+notification_error_e notification_get_with_person_list(int count,
+                                                        notification_list_h *list);
 
 /**
  * @brief Free notification list

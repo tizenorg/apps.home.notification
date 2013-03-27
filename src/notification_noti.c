@@ -31,6 +31,19 @@
 #include <notification_debug.h>
 #include <notification_internal.h>
 
+#define NODE_POPULATE_COMMON_QUERY					\
+	"select "							\
+	"type, layout, caller_pkgname, launch_pkgname, image_path, "	\
+	"group_id, priv_id, b_text, b_key, b_format_args, "		\
+	"num_format_args, text_domain, text_dir, time, insert_time, "	\
+	"person_id, args, group_args, b_execute_option, "		\
+	"b_service_responding, b_service_single_launch, "		\
+	"b_service_multi_launch, sound_type, sound_path, "		\
+	"vibration_type, vibration_path, led_operation, led_argb, "     \
+        "led_on_ms, led_off_ms, flags_for_property, display_applist, "  \
+        "progress_size, progress_percentage "		                \
+	"from noti_list "
+
 #define NOTI_BURST_DELETE_UNIT 10
 
 static void __free_and_set(void **target_ptr, void *new_ptr) {
@@ -225,7 +238,7 @@ static int _notification_noti_make_query(notification_h noti, char *query,
 		 "title_key, "
 		 "b_text, b_key, b_format_args, num_format_args, "
 		 "text_domain, text_dir, "
-		 "time, insert_time, "
+		 "time, insert_time, person_id, "
 		 "args, group_args, "
 		 "b_execute_option, "
 		 "b_service_responding, b_service_single_launch, b_service_multi_launch, "
@@ -240,7 +253,7 @@ static int _notification_noti_make_query(notification_h noti, char *query,
 		 "$title_key, "
 		 "'%s', '%s', '%s', %d, "
 		 "'%s', '%s', "
-		 "%d, %d, "
+		 "%d, %d, %d, "
 		 "'%s', '%s', "
 		 "'%s', "
 		 "'%s', '%s', '%s', "
@@ -257,7 +270,8 @@ static int _notification_noti_make_query(notification_h noti, char *query,
 		 NOTIFICATION_CHECK_STR(b_format_args), noti->num_format_args,
 		 NOTIFICATION_CHECK_STR(noti->domain),
 		 NOTIFICATION_CHECK_STR(noti->dir), (int)noti->time,
-		 (int)noti->insert_time, NOTIFICATION_CHECK_STR(args),
+		 (int)noti->insert_time, noti->person_db_id,
+		 NOTIFICATION_CHECK_STR(args),
 		 NOTIFICATION_CHECK_STR(group_args),
 		 NOTIFICATION_CHECK_STR(b_execute_option),
 		 NOTIFICATION_CHECK_STR(b_service_responding),
@@ -394,7 +408,9 @@ static int _notification_noti_make_update_query(notification_h noti, char *query
 		 "led_on_ms = %d, led_off_ms = %d, "
 		 "flags_for_property = %d, flag_simmode = %d, "
 		 "display_applist = %d, "
-		 "progress_size = $progress_size, progress_percentage = $progress_percentage "
+		 "progress_size = $progress_size, "
+		 "progress_percentage = $progress_percentage "
+		 "person_id = %d "
 		 "where priv_id = %d ",
 		 noti->type,
 		 noti->layout,
@@ -418,6 +434,7 @@ static int _notification_noti_make_update_query(notification_h noti, char *query
 		 noti->led_on_ms,
 		 noti->led_off_ms,
 		 noti->flags_for_property, flag_simmode, noti->display_applist,
+		 noti->person_db_id,
 		 noti->priv_id);
 
 	/* Free decoded data */
@@ -483,6 +500,7 @@ static void _notification_noti_populate_from_stmt(sqlite3_stmt * stmt, notificat
 	__free_and_set((void **)&(noti->dir), notification_db_column_text(stmt, col++));
 	noti->time = sqlite3_column_int(stmt, col++);
 	noti->insert_time = sqlite3_column_int(stmt, col++);
+	noti->person_db_id = sqlite3_column_int(stmt, col++);
 	noti->args = notification_db_column_bundle(stmt, col++);
 	noti->group_args = notification_db_column_bundle(stmt, col++);
 
@@ -718,14 +736,7 @@ int notification_noti_get_by_priv_id(notification_h noti, char *pkgname, int pri
 		return NOTIFICATION_ERROR_FROM_DB;
 	}
 
-	char *base_query = "select "
-			 "type, layout, caller_pkgname, launch_pkgname, image_path, group_id, priv_id, "
-			 "b_text, b_key, b_format_args, num_format_args, "
-			 "text_domain, text_dir, time, insert_time, args, group_args, "
-			 "b_execute_option, b_service_responding, b_service_single_launch, b_service_multi_launch, "
-			 "sound_type, sound_path, vibration_type, vibration_path, led_operation, led_argb, led_on_ms, led_off_ms, "
-			 "flags_for_property, display_applist, progress_size, progress_percentage "
-			 "from noti_list ";
+	char *base_query = NODE_POPULATE_COMMON_QUERY;
 
 	if (pkgname != NULL) {
 		snprintf(query, sizeof(query), "%s where caller_pkgname = '%s' and priv_id = %d",
@@ -1320,6 +1331,116 @@ err:
 	return ret;
 }
 
+static notification_error_e get_person_list_do(int person_db_id,
+						int count,
+						notification_list_h * list)
+{
+	sqlite3 *db = NULL;
+	sqlite3_stmt *stmt = NULL;
+	char query[NOTIFICATION_QUERY_MAX] = { 0, };
+	char query_base[NOTIFICATION_QUERY_MAX] = { 0, };
+	char query_where[NOTIFICATION_QUERY_MAX] = { 0, };
+
+	notification_list_h get_list = NULL;
+	notification_h noti = NULL;
+	int internal_count = 0;
+	int ret = 0;
+	int status;
+
+	/* Open DB */
+	db = notification_db_open(DBPATH);
+
+	/* Check current sim status */
+	ret = vconf_get_int(VCONFKEY_TELEPHONY_SIM_SLOT, &status);
+
+	/* Make query */
+	snprintf(query_base, sizeof(query_base), NODE_POPULATE_COMMON_QUERY);
+
+	if (status == VCONFKEY_TELEPHONY_SIM_INSERTED) {
+		if (person_db_id)
+			snprintf(query_where, sizeof(query_where),
+				 "where  person_id = '%d' ", person_db_id);
+		else
+			snprintf(query_where, sizeof(query_where),
+				 "where person_id != 0 ");
+	} else {
+		if (person_db_id)
+			snprintf(query_where, sizeof(query_where),
+				 "where  person_id = '%d' and"
+				 " flag_simmode = 0 ", person_db_id);
+		else
+			snprintf(query_where, sizeof(query_where),
+				 "where person_id != 0 and"
+				 " flag_simmode = 0 ");
+	}
+
+	snprintf(query, sizeof(query),
+		 "%s %s "
+		 "order by rowid desc, time desc", query_base, query_where);
+
+	ret = sqlite3_prepare(db, query, strlen(query), &stmt, NULL);
+	if (ret != SQLITE_OK) {
+		NOTIFICATION_ERR("Select Query : %s", query);
+		NOTIFICATION_ERR("Select DB error(%d) : %s", ret,
+				 sqlite3_errmsg(db));
+
+		ret = NOTIFICATION_ERROR_FROM_DB;
+		goto err;
+	}
+
+	ret = sqlite3_step(stmt);
+	while (ret == SQLITE_ROW) {
+		/* Make notification list */
+		noti = _notification_noti_get_item(stmt);
+		if (noti != NULL) {
+			internal_count++;
+
+			get_list = notification_list_append(get_list, noti);
+
+			if (count != -1 && internal_count >= count) {
+				NOTIFICATION_INFO
+				    ("internal count %d >= count %d",
+				     internal_count, count);
+				break;
+			}
+		}
+
+		ret = sqlite3_step(stmt);
+	}
+
+	ret = NOTIFICATION_ERROR_NONE;
+
+err:
+	if (stmt) {
+		sqlite3_finalize(stmt);
+	}
+
+	/* Close DB */
+	if (db) {
+		notification_db_close(&db);
+	}
+
+	if (get_list != NULL) {
+		*list = notification_list_get_head(get_list);
+	}
+
+	return ret;
+}
+
+notification_error_e notification_noti_get_person_list(int person_db_id,
+                                                        int count,
+                                                        notification_list_h *
+                                                        list)
+{
+	return get_person_list_do(person_db_id, count, list);
+}
+
+notification_error_e notification_noti_get_with_person_list(int count,
+							     notification_list_h * list)
+{
+	return get_person_list_do(0, count, list);
+}
+
 notification_error_e notification_noti_get_grouping_list(notification_type_e type,
 							 int count,
 							 notification_list_h *
@@ -1347,14 +1468,7 @@ notification_error_e notification_noti_get_grouping_list(notification_type_e typ
 	ret = vconf_get_int(VCONFKEY_TELEPHONY_SIM_SLOT, &status);
 
 	/* Make query */
-	snprintf(query_base, sizeof(query_base), "select "
-		 "type, layout, caller_pkgname, launch_pkgname, image_path, group_id, priv_id, "
-		 "b_text, b_key, b_format_args, num_format_args, "
-		 "text_domain, text_dir, time, insert_time, args, group_args, "
-		 "b_execute_option, b_service_responding, b_service_single_launch, b_service_multi_launch, "
-		 "sound_type, sound_path, vibration_type, vibration_path, led_operation, led_argb, led_on_ms, led_off_ms, "
-		 "flags_for_property, display_applist, progress_size, progress_percentage "
-		 "from noti_list ");
+	snprintf(query_base, sizeof(query_base), NODE_POPULATE_COMMON_QUERY);
 
 	if (status == VCONFKEY_TELEPHONY_SIM_INSERTED) {
 		if (type != NOTIFICATION_TYPE_NONE) {
@@ -1450,14 +1564,7 @@ notification_error_e notification_noti_get_detail_list(const char *pkgname,
 	ret = vconf_get_int(VCONFKEY_TELEPHONY_SIM_SLOT, &status);
 
 	/* Make query */
-	snprintf(query_base, sizeof(query_base), "select "
-		 "type, layout, caller_pkgname, launch_pkgname, image_path, group_id, priv_id, "
-		 "b_text, b_key, b_format_args, num_format_args, "
-		 "text_domain, text_dir, time, insert_time, args, group_args, "
-		 "b_execute_option, b_service_responding, b_service_single_launch, b_service_multi_launch, "
-		 "sound_type, sound_path, vibration_type, vibration_path, led_operation, led_argb, led_on_ms, led_off_ms, "
-		 "flags_for_property, display_applist, progress_size, progress_percentage "
-		 "from noti_list ");
+	snprintf(query_base, sizeof(query_base), NODE_POPULATE_COMMON_QUERY);
 
 	if (priv_id == NOTIFICATION_PRIV_ID_NONE && group_id == NOTIFICATION_GROUP_ID_NONE) {
 		if (status == VCONFKEY_TELEPHONY_SIM_INSERTED) {

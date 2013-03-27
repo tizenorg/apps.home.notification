@@ -66,6 +66,8 @@ struct _notification {
 	time_t time;		/* time set by application */
 	time_t insert_time;	/* insert time */
 
+	int person_db_id;       /* associtated person's id (0 for none) */
+
 	int flags_for_property;	/* property NOTIFICATION_PROP_XXX */
 	int display_applist;	/* display app list  NOTIFICATION_DISPLAY_APP_XXX */
 

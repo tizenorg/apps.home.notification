@@ -292,6 +292,32 @@ EXPORT_API notification_error_e notification_get_time(notification_h noti,
 	return NOTIFICATION_ERROR_NONE;
 }
 
+EXPORT_API notification_error_e notification_set_person(notification_h noti,
+                                                         int person_db_id)
+{
+	if (!noti)
+		return NOTIFICATION_ERROR_INVALID_DATA;
+
+	noti->person_db_id = person_db_id;
+
+	NOTIFICATION_DBG("setting person as %d", noti->person_db_id);
+
+	return NOTIFICATION_ERROR_NONE;
+}
+
+EXPORT_API notification_error_e notification_get_person(notification_h noti,
+                                                         int * ret_person_db_id)
+{
+	/* Check noti and person are valid data */
+	if (noti == NULL || ret_person_db_id == NULL)
+		return NOTIFICATION_ERROR_INVALID_DATA;
+
+	/* Set person infomation */
+	*ret_person_db_id = noti->person_db_id;
+
+	return NOTIFICATION_ERROR_NONE;
+}
+
 EXPORT_API notification_error_e notification_get_insert_time(notification_h noti,
 							     time_t * ret_time)
 {
@@ -2217,6 +2243,7 @@ EXPORT_API notification_error_e notification_clone(notification_h noti, notifica
 
 	new_noti->type = noti->type;
 	new_noti->layout = noti->layout;
+	new_noti->person_db_id = noti->person_db_id;
 
 	new_noti->group_id = noti->group_id;
 	new_noti->internal_group_id = noti->internal_group_id;
@@ -2621,6 +2648,44 @@ EXPORT_API notification_error_e notification_get_list(notification_type_e type,
 	int ret = 0;
 
 	ret = notification_noti_get_grouping_list(type, count, &get_list);
+	if (ret != NOTIFICATION_ERROR_NONE) {
+		return ret;
+	}
+
+	*list = get_list;
+
+	return NOTIFICATION_ERROR_NONE;
+}
+
+EXPORT_API notification_error_e
+notification_get_person_list(int person_db_id, int count,
+			      notification_list_h * list)
+{
+	notification_list_h get_list = NULL;
+	int ret = 0;
+
+	if (!person_db_id || !list)
+		return NOTIFICATION_ERROR_INVALID_DATA;
+
+	ret = notification_noti_get_person_list
+		(person_db_id, count, &get_list);
+	if (ret != NOTIFICATION_ERROR_NONE) {
+		return ret;
+	}
+
+	*list = get_list;
+
+	return NOTIFICATION_ERROR_NONE;
+}
+
+EXPORT_API notification_error_e
+notification_get_with_person_list(int count,
+				   notification_list_h * list)
+{
+	notification_list_h get_list = NULL;
+	int ret = 0;
+
+	ret = notification_noti_get_with_person_list(count, &get_list);
 	if (ret != NOTIFICATION_ERROR_NONE) {
 		return ret;
 	}

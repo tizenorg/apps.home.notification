@@ -64,4 +64,11 @@ notification_error_e notification_noti_get_detail_list(const char *pkgname,
 						       int priv_id, int count,
 						       notification_list_h *list);
 
+notification_error_e notification_noti_get_person_list(int person_db_id,
+                                                        int count,
+                                                        notification_list_h *list);
+
+notification_error_e notification_noti_get_with_person_list(int count,
+                                                             notification_list_h *list);
+
 #endif				/* __NOTIFICATION_NOTI_H__ */

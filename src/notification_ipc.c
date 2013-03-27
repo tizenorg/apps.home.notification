@@ -380,6 +380,7 @@ EXPORT_API notification_error_e notification_ipc_make_noti_from_packet(notificat
 	int led_off_ms;
 	time_t time;
 	time_t insert_time;
+	int person_db_id;
 	int flags_for_property;
 	int display_applist;
 	double progress_size;
@@ -395,7 +396,7 @@ EXPORT_API notification_error_e notification_ipc_make_noti_from_packet(notificat
 	}
 
 	ret = packet_get(packet,
-			"iiiiisssssssssssssisisisiiiiiiiiddssss",
+			"iiiiisssssssssssssisisisiiiiiiiiiddssss",
 			&type,
 			&layout,
 			&group_id,
@@ -426,6 +427,7 @@ EXPORT_API notification_error_e notification_ipc_make_noti_from_packet(notificat
 			&led_off_ms,
 			&time,
 			&insert_time,
+			&person_db_id,
 			&flags_for_property,
 			&display_applist,
 			&progress_size,
@@ -435,7 +437,7 @@ EXPORT_API notification_error_e notification_ipc_make_noti_from_packet(notificat
 			&temp_title,
 			&temp_content);
 
-	if (ret != 38) {
+	if (ret != 39) {
 		NOTIFICATION_ERR("failed to create a noti from packet");
 		return NOTIFICATION_ERROR_INVALID_DATA;
 	}
@@ -481,6 +483,7 @@ EXPORT_API notification_error_e notification_ipc_make_noti_from_packet(notificat
 	noti->led_off_ms = led_off_ms;
 	noti->time = time;
 	noti->insert_time = insert_time;
+	noti->person_db_id = person_db_id;
 	noti->flags_for_property = flags_for_property;
 	noti->display_applist = display_applist;
 	noti->progress_size = progress_size;
@@ -581,7 +584,7 @@ EXPORT_API struct packet *notification_ipc_make_packet_from_noti(notification_h 
 	}
 
 	result = func_to_create_packet(command,
-			"iiiiisssssssssssssisisisiiiiiiiiddssss",
+			"iiiiisssssssssssssisisisiiiiiiiiiddssss",
 			noti->type,
 			noti->layout,
 			noti->group_id,
@@ -612,6 +615,7 @@ EXPORT_API struct packet *notification_ipc_make_packet_from_noti(notification_h 
 			noti->led_off_ms,
 			noti->time,
 			noti->insert_time,
+			noti->person_db_id,
 			noti->flags_for_property,
 			noti->display_applist,
 			noti->progress_size,
