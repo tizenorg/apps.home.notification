@@ -19,35 +19,21 @@
  *
  */
 
-#ifndef __NOTIFICATION_DB_H__
-#define __NOTIFICATION_DB_H__
+#ifndef __NOTIFICATION_SETTING_H__
+#define __NOTIFICATION_SETTING_H__
 
-#include <bundle.h>
-#include <sqlite3.h>
+#include <notification.h>
 
-#ifndef DBDIR
-#error "DBDIR not defined"
+typedef struct _notification_setting_h notification_setting_h;
+
+#ifdef __cplusplus
+extern "C" {
 #endif
 
-#ifndef DBFILE
-#error "DBFILE not defined"
+notification_error_e notification_setting_property_set(const char *pkgname, const char *property, const char *value);
+notification_error_e notification_setting_property_get(const char *pkgname, const char *property, char **value);
+
+#ifdef __cplusplus
+}
 #endif
-
-#define DBPATH DBDIR"/"DBFILE
-
-#define NOTIFICATION_QUERY_MAX 4096
-
-#define NOTIFICATION_EMPTY_STR ""
-#define NOTIFICATION_CHECK_STR(p) ((p)?(p):NOTIFICATION_EMPTY_STR)
-
-sqlite3 *notification_db_open(const char *dbfile);
-
-int notification_db_close(sqlite3 ** db);
-
-int notification_db_exec(sqlite3 * db, const char *query, int *num_changes);
-
-char *notification_db_column_text(sqlite3_stmt * stmt, int col);
-
-bundle *notification_db_column_bundle(sqlite3_stmt * stmt, int col);
-
-#endif				/* __NOTIFICATION_DB_H__ */
+#endif				/* __NOTIFICATION_SETTING_H__ */

@@ -3,7 +3,7 @@
  *
  * Copyright (c) 2000 - 2011 Samsung Electronics Co., Ltd. All rights reserved.
  *
- * Contact: Seungtaek Chung <seungtaek.chung@samsung.com>, Mi-Ju Lee <miju52.lee@samsung.com>, Xi Zhichan <zhichan.xi@samsung.com>, Youngsub Ko <ys4610.ko@samsung.com>
+ * Contact: Seungtaek Chung <seungtaek.chung@samsung.com>, Mi-Ju Lee <miju52.lee@samsung.com>, Xi Zhichan <zhichan.xi@samsung.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,9 +28,9 @@
 #include <notification_db.h>
 #include <notification_debug.h>
 #include <notification_ongoing.h>
-#include <notification_internal.h>
+#include <notification_private.h>
 
-notification_error_e notification_ongoing_update_progress(const char *caller_pkgname,
+int notification_ongoing_update_progress(const char *caller_pkgname,
 							  int priv_id,
 							  double progress)
 {
@@ -70,15 +70,13 @@ notification_error_e notification_ongoing_update_progress(const char *caller_pkg
 	dbus_message_unref(signal);
 
 	if (ret) {
-		NOTIFICATION_INFO("Send progress info : %s(%d) %.2f",
-				  caller_pkgname, priv_id, progress);
 		return NOTIFICATION_ERROR_NONE;
 	}
 
 	return NOTIFICATION_ERROR_FROM_DBUS;
 }
 
-notification_error_e notification_ongoing_update_size(const char *caller_pkgname,
+int notification_ongoing_update_size(const char *caller_pkgname,
 						      int priv_id, double size)
 {
 	DBusConnection *connection = NULL;
@@ -106,11 +104,8 @@ notification_error_e notification_ongoing_update_size(const char *caller_pkgname
 				       DBUS_TYPE_INT32, &priv_id,
 				       DBUS_TYPE_DOUBLE, &size,
 				       DBUS_TYPE_INVALID);
-	NOTIFICATION_INFO("arg...");
 	if (ret) {
 		ret = dbus_connection_send(connection, signal, NULL);
-		NOTIFICATION_INFO("Send size info : %s(%d) %.2f",
-				  caller_pkgname, priv_id, size);
 
 		if (ret) {
 			dbus_connection_flush(connection);
@@ -120,15 +115,13 @@ notification_error_e notification_ongoing_update_size(const char *caller_pkgname
 	dbus_message_unref(signal);
 
 	if (ret) {
-		NOTIFICATION_INFO("Send size info : %s(%d) %.2f",
-				  caller_pkgname, priv_id, size);
 		return NOTIFICATION_ERROR_NONE;
 	}
 
 	return NOTIFICATION_ERROR_FROM_DBUS;
 }
 
-notification_error_e notification_ongoing_update_content(const char *caller_pkgname,
+int notification_ongoing_update_content(const char *caller_pkgname,
 						      int priv_id, const char *content)
 {
 	DBusConnection *connection = NULL;
@@ -165,8 +158,6 @@ notification_error_e notification_ongoing_update_content(const char *caller_pkgn
 	}
 	if (ret) {
 		ret = dbus_connection_send(connection, signal, NULL);
-		NOTIFICATION_INFO("Send content : %s(%d) %s",
-				  caller_pkgname, priv_id, content);
 
 		if (ret) {
 			dbus_connection_flush(connection);

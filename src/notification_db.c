@@ -3,7 +3,7 @@
  *
  * Copyright (c) 2000 - 2011 Samsung Electronics Co., Ltd. All rights reserved.
  *
- * Contact: Seungtaek Chung <seungtaek.chung@samsung.com>, Mi-Ju Lee <miju52.lee@samsung.com>, Xi Zhichan <zhichan.xi@samsung.com>, Youngsub Ko <ys4610.ko@samsung.com>
+ * Contact: Seungtaek Chung <seungtaek.chung@samsung.com>, Mi-Ju Lee <miju52.lee@samsung.com>, Xi Zhichan <zhichan.xi@samsung.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,21 +26,25 @@
 
 #include <sqlite3.h>
 #include <db-util.h>
+#include <tizen.h>
 
 #include <notification_error.h>
 #include <notification_debug.h>
 #include <notification_db.h>
 
-#define SDFTET "/opt/dbspace/.notification_noti.db"
-
-sqlite3 *notification_db_open(const char *dbfile)
+sqlite3 * notification_db_open(const char *dbfile)
 {
 	int ret = 0;
-	sqlite3 *db;
+	sqlite3 *db =0;
 
 	ret = db_util_open(dbfile, &db, 0);
 	if (ret != SQLITE_OK) {
-		NOTIFICATION_ERR("DB open error(%d), %s", ret, dbfile);
+		if (ret == SQLITE_PERM) {
+			set_last_result(NOTIFICATION_ERROR_PERMISSION_DENIED);
+		}
+		else {
+			set_last_result(NOTIFICATION_ERROR_FROM_DB);
+		}
 		return NULL;
 	}
 
@@ -52,7 +56,7 @@ int notification_db_close(sqlite3 ** db)
 	int ret = 0;
 
 	if (db == NULL || *db == NULL) {
-		return NOTIFICATION_ERROR_INVALID_DATA;
+		return NOTIFICATION_ERROR_INVALID_PARAMETER;
 	}
 
 	ret = db_util_close(*db);
@@ -66,20 +70,40 @@ int notification_db_close(sqlite3 ** db)
 	return NOTIFICATION_ERROR_NONE;
 }
 
-int notification_db_exec(sqlite3 * db, const char *query)
+int notification_db_exec(sqlite3 * db, const char *query, int *num_changes)
 {
 	int ret = 0;
-	char *err_msg = NULL;
+	sqlite3_stmt *stmt = NULL;
 
 	if (db == NULL) {
-		return NOTIFICATION_ERROR_INVALID_DATA;
+		return NOTIFICATION_ERROR_INVALID_PARAMETER;
+	}
+	if (query == NULL) {
+		return NOTIFICATION_ERROR_INVALID_PARAMETER;
 	}
 
-	ret = sqlite3_exec(db, query, NULL, NULL, &err_msg);
+	ret = sqlite3_prepare_v2(db, query, strlen(query), &stmt, NULL);
 	if (ret != SQLITE_OK) {
-		NOTIFICATION_ERR("SQL error(%d) : %s", ret, err_msg);
-		sqlite3_free(err_msg);
+		NOTIFICATION_ERR("DB err(%d) : %s", ret,
+				 sqlite3_errmsg(db));
 		return NOTIFICATION_ERROR_FROM_DB;
+	}
+
+	if (stmt != NULL) {
+		ret = sqlite3_step(stmt);
+		if (ret == SQLITE_OK || ret == SQLITE_DONE) {
+			if (num_changes != NULL) {
+				*num_changes = sqlite3_changes(db);
+			}
+			sqlite3_finalize(stmt);
+		} else {
+			NOTIFICATION_ERR("DB err(%d) : %s", ret,
+					 sqlite3_errmsg(db));
+			sqlite3_finalize(stmt);
+			return NOTIFICATION_ERROR_FROM_DB;
+		}
+	} else {
+			return NOTIFICATION_ERROR_FROM_DB;
 	}
 
 	return NOTIFICATION_ERROR_NONE;

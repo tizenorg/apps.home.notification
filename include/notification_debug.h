@@ -3,7 +3,7 @@
  *
  * Copyright (c) 2000 - 2011 Samsung Electronics Co., Ltd. All rights reserved.
  *
- * Contact: Seungtaek Chung <seungtaek.chung@samsung.com>, Mi-Ju Lee <miju52.lee@samsung.com>, Xi Zhichan <zhichan.xi@samsung.com>, Youngsub Ko <ys4610.ko@samsung.com>
+ * Contact: Seungtaek Chung <seungtaek.chung@samsung.com>, Mi-Ju Lee <miju52.lee@samsung.com>, Xi Zhichan <zhichan.xi@samsung.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@
 #ifndef __NOTIFICATION_DEBUG_H__
 #define __NOTIFICATION_DEBUG_H__
 
-#define LOG_TAG "notification"
+#define LOG_TAG "NOTIFICATION"
 #include <dlog.h>
 
 #ifndef EXPORT_API
@@ -56,22 +56,22 @@
 
 #define NOTIFICATION_DBG(fmt , args...) \
 	do{ \
-		LOGD("[%s : %d] "fmt"\n",__func__,__LINE__,##args ); \
+		SECURE_LOGD("[%s : %d] "fmt"\n",__func__,__LINE__,##args ); \
 	} while(0)
 
 #define NOTIFICATION_INFO(fmt , args...) \
 	do{ \
-		LOGI("[%s : %d] "fmt"\n",__func__,__LINE__,##args ); \
+		SECURE_LOGI("[%s : %d] "fmt"\n",__func__,__LINE__,##args ); \
 	} while(0)
 
 #define NOTIFICATION_WARN(fmt , args...) \
 	do{ \
-		LOGI("[%s : %d] "fmt"\n",__func__,__LINE__,##args ); \
+		SECURE_LOGW("[%s : %d] "fmt"\n",__func__,__LINE__,##args ); \
 	} while(0)
 
 #define NOTIFICATION_ERR(fmt , args...) \
 	do{ \
-		LOGI("[%s : %d] "fmt"\n",__func__,__LINE__,##args ); \
+		SECURE_LOGE("[%s : %d] "fmt"\n",__func__,__LINE__,##args ); \
 	} while(0)
 
 #endif /* _DLOG_H_ */

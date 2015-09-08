@@ -3,7 +3,7 @@
  *
  * Copyright (c) 2000 - 2011 Samsung Electronics Co., Ltd. All rights reserved.
  *
- * Contact: Seungtaek Chung <seungtaek.chung@samsung.com>, Mi-Ju Lee <miju52.lee@samsung.com>, Xi Zhichan <zhichan.xi@samsung.com>, Youngsub Ko <ys4610.ko@samsung.com>
+ * Contact: Seungtaek Chung <seungtaek.chung@samsung.com>, Mi-Ju Lee <miju52.lee@samsung.com>, Xi Zhichan <zhichan.xi@samsung.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,31 +24,47 @@
 
 #include <notification.h>
 
+#define TAG_TIME "TIME"
+#define TAG_TYPE_INVALID -1
+#define TAG_TYPE_TIME 1
+
+int notification_noti_set_tag(const char *tag, char *value, char *buf, int buf_len);
+
+char *notification_noti_strip_tag(const char *tagged_str);
+
+int notification_noti_get_tag_type(const char *tagged_str);
+
 int notification_noti_insert(notification_h noti);
 
 int notification_noti_update(notification_h noti);
 
-int notification_noti_delete_all(notification_type_e type, const char *pkgname);
+int notification_noti_delete_all(notification_type_e type, const char *pkgname, int *num_deleted, int **list_deleted_rowid);
 
 int notification_noti_delete_group_by_group_id(const char *pkgname,
-					       int group_id);
+					       int group_id, int *num_deleted, int **list_deleted_rowid);
 
 int notification_noti_delete_group_by_priv_id(const char *pkgname, int priv_id);
 
-int notification_noti_delete_by_priv_id(const char *pkgname, int priv_id);
+int notification_noti_get_by_priv_id(notification_h noti, char *pkgname, int priv_id);
+int notification_noti_get_by_tag(notification_h noti, char *pkgname, char* tag);
 
-notification_error_e notification_noti_get_count(notification_type_e type,
+int notification_noti_delete_by_priv_id(const char *pkgname, int priv_id);
+int notification_noti_delete_by_priv_id_get_changes(const char *pkgname, int priv_id, int *num_changes);
+
+int notification_noti_get_count(notification_type_e type,
 						 const char *pkgname,
 						 int group_id, int priv_id,
 						 int *count);
 
-notification_error_e notification_noti_get_grouping_list(notification_type_e type,
+int notification_noti_get_grouping_list(notification_type_e type,
 							 int count,
 							 notification_list_h *list);
 
-notification_error_e notification_noti_get_detail_list(const char *pkgname,
+int notification_noti_get_detail_list(const char *pkgname,
 						       int group_id,
 						       int priv_id, int count,
 						       notification_list_h *list);
+
+int notification_noti_check_tag(notification_h noti);
 
 #endif				/* __NOTIFICATION_NOTI_H__ */

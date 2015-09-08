@@ -24,7 +24,7 @@ libnotification (0.1.1-12) unstable; urgency=low
 
 libnotification (0.1.1-11) unstable; urgency=low
 
-  * fix pkgconfig file
+  * fix pkgconfig file 
   * Git: slp/pkgs/n/notification
   * Tag: libnotification_0.1.1-11
 
@@ -98,7 +98,7 @@ libnotification (0.1.1-2) unstable; urgency=low
 
   * Fix DB query to bind title key string
   * Git: slp-source.sec.samsung.net:slp/pkgs/n/notification
-  * Tag: libnotification_0.1.1-2
+  * Tag: libnotification_0.1.1-2 
 
  -- Mi-Ju Lee <miju52.lee@samsung.com>  Thu, 17 Nov 2011 11:11:48 +0900
 
@@ -114,7 +114,7 @@ libnotification (0.1.0-9) unstable; urgency=low
 
   * Apply Boilerplate
   * Git: slp-source.sec.samsung.net:slp/pkgs/n/notification
-  * Tag: libnotification_0.1.0-9
+  * Tag: libnotification_0.1.0-9 
 
  -- Mi-Ju Lee <miju52.lee@samsung.com>  Thu, 03 Nov 2011 17:29:12 +0900
 
@@ -130,7 +130,7 @@ libnotification (0.1.0-7) unstable; urgency=low
 
   * Remove eina from pc file
   * Git: slp-source.sec.samsung.net:slp/pkgs/n/notification
-  * Tag: libnotification_0.1.0-7
+  * Tag: libnotification_0.1.0-7 
 
  -- Mi-Ju Lee <miju52.lee@samsung.com>  Tue, 18 Oct 2011 16:45:27 +0900
 
@@ -138,7 +138,7 @@ libnotification (0.1.0-6) unstable; urgency=low
 
   * Add API to select display app, Fix DB query error
   * Git: slp-source.sec.samsung.net:slp/pkgs/n/notification
-  * Tag: libnotification_0.1.0-6
+  * Tag: libnotification_0.1.0-6 
 
  -- Mi-Ju Lee <miju52.lee@samsung.com>  Mon, 17 Oct 2011 20:52:38 +0900
 
@@ -146,7 +146,7 @@ libnotification (0.1.0-5) unstable; urgency=low
 
   * Add New API for tigen UX, Merge noti and ongoing DB
   * Git: slp-source.sec.samsung.net:slp/pkgs/n/notification
-  * Tag: libnotification_0.1.0-5
+  * Tag: libnotification_0.1.0-5 
 
  -- Mi-Ju Lee <miju52.lee@samsung.com>  Mon, 10 Oct 2011 19:39:17 +0900
 
@@ -170,7 +170,7 @@ libnotification (0.1.0-2) unstable; urgency=low
 
   * Add property for tickernoti, Remove content display option
   * Git: slp-source.sec.samsung.net:slp/pkgs/n/notification
-  * Tag: libnotification_0.1.0-2
+  * Tag: libnotification_0.1.0-2 
 
  -- Mi-Ju Lee <miju52.lee@samsung.com>  Wed, 07 Sep 2011 23:15:25 +0900
 
