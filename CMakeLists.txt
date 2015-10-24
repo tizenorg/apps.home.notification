@@ -24,50 +24,45 @@ SET(SRCS
 	./src/notification_list.c
 	./src/notification_status.c
 	./src/notification_ipc.c
-	./src/notification_setting.c)
+	./src/notification_setting.c
+	./src/notification_internal.c)
+SET(HEADERS-DEVEL
+	./include/notification.h
+	./include/notification_internal.h
+	./include/notification_error.h
+	./include/notification_type.h
+	./include/notification_list.h
+	./include/notification_ongoing_flag.h
+	./include/notification_text_domain.h
+	./include/notification_status.h
+	./include/notification_status_internal.h
+	./include/notification_setting.h
+	./include/notification_setting_internal.h
+   )
+
 
 SET(HEADERS-SERVICE-DEVEL
 	./include/notification_ipc.h
 	./include/notification_noti.h
 	./include/notification_setting_service.h)
 
-IF (TIZEN_WEARABLE)
-INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/include
-	${CMAKE_SOURCE_DIR}/include/wearable)
-SET(HEADERS-DEVEL
-		./include/wearable/notification_type.h
-        ./include/notification.h
-        ./include/notification_internal.h
-        ./include/notification_error.h
-        ./include/notification_list.h
-        ./include/notification_status.h)
-ENDIF (TIZEN_WEARABLE)
-IF (TIZEN_MOBILE)
-INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/include
-	${CMAKE_SOURCE_DIR}/include/mobile)
-SET(HEADERS-DEVEL
-		./include/mobile/notification_type.h
-        ./include/notification.h
-        ./include/notification_internal.h
-        ./include/notification_error.h
-        ./include/notification_list.h
-        ./include/notification_status.h)
-ENDIF (TIZEN_MOBILE)
+INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/include)
 
 INCLUDE(FindPkgConfig)
-pkg_check_modules(pkgs REQUIRED 
-	sqlite3 
-	db-util 
-	vconf 
-	bundle 
-	dlog 
-	ail 
-	aul 
+pkg_check_modules(pkgs REQUIRED
+	sqlite3
+	db-util
+	vconf
+	bundle
+	dlog
+	ail
+	aul
 	appsvc
 	dbus-1
 	dbus-glib-1
 	com-core
 	capi-appfw-application
+	capi-appfw-app-manager
 	capi-appfw-package-manager
 	edbus
 	elementary

@@ -26,13 +26,18 @@
 #include <errno.h>
 #include <vconf.h>
 #include <E_DBus.h>
+#include <Ecore.h>
+#include <Elementary.h>
+#include <Eina.h>
 
 #include <notification.h>
 #include <notification_db.h>
+#include <notification_list.h>
 #include <notification_noti.h>
 #include <notification_debug.h>
 #include <notification_private.h>
 #include <notification_status.h>
+#include <notification_status_internal.h>
 
 #define PATH_NAME    "/Org/Tizen/System/Notification/Status_message"
 #define INTERFACE_NAME "org.tizen.system.notification.status_message"
@@ -74,7 +79,7 @@ static void __notification_status_message_dbus_callback(void *data, DBusMessage 
 		dbus_error_free(&err);
 		return;
 	}
-	/*if (!md.callback)
+	if (!md.callback)
 		return;
 
 	if (strlen(message) <= 0){
@@ -82,59 +87,7 @@ static void __notification_status_message_dbus_callback(void *data, DBusMessage 
 		return;
 	}
 
-	md.callback(message, md.data);*/
-
-	notification_noti_post_toast_message(message);
-}
-
-EXPORT_API
-int notification_status_message_post(const char *message)
-{
-	DBusConnection *connection = NULL;
-	DBusMessage *signal = NULL;
-	DBusError err;
-	dbus_bool_t ret;
-
-	if (!message) {
-		NOTIFICATION_ERR("message is NULL");
-		return NOTIFICATION_ERROR_INVALID_PARAMETER;
-	}
-
-	if (strlen(message) <= 0) {
-		NOTIFICATION_ERR("message has only NULL");
-		return NOTIFICATION_ERROR_INVALID_PARAMETER;
-	}
-
-	dbus_error_init(&err);
-	connection = dbus_bus_get(DBUS_BUS_SYSTEM, &err);
-	if (!connection) {
-		NOTIFICATION_ERR("Fail to dbus_bus_get");
-		return NOTIFICATION_ERROR_FROM_DBUS;
-	}
-
-	signal =
-	    dbus_message_new_signal(PATH_NAME, INTERFACE_NAME,
-				    MEMBER_NAME);
-	if (!signal) {
-		NOTIFICATION_ERR("Fail to dbus_message_new_signal");
-		return NOTIFICATION_ERROR_FROM_DBUS;
-	}
-
-	ret = dbus_message_append_args(signal,
-					   DBUS_TYPE_STRING, &message,
-					   DBUS_TYPE_INVALID);
-	if (ret) {
-		ret = dbus_connection_send(connection, signal, NULL);
-
-		if (ret) {
-			dbus_connection_flush(connection);
-		}
-	}
-
-	dbus_message_unref(signal);
-	dbus_connection_unref(connection);
-
-	return NOTIFICATION_ERROR_NONE;
+	md.callback(message, md.data);
 }
 
 EXPORT_API
@@ -191,3 +144,55 @@ int notification_status_monitor_message_cb_unset(void)
 
 	return NOTIFICATION_ERROR_NONE;
 }
+
+EXPORT_API
+int notification_status_message_post(const char *message)
+{
+	DBusConnection *connection = NULL;
+	DBusMessage *signal = NULL;
+	DBusError err;
+	dbus_bool_t ret;
+
+	if (!message) {
+		NOTIFICATION_ERR("message is NULL");
+		return NOTIFICATION_ERROR_INVALID_PARAMETER;
+	}
+
+	if (strlen(message) <= 0) {
+		NOTIFICATION_ERR("message has only NULL");
+		return NOTIFICATION_ERROR_INVALID_PARAMETER;
+	}
+
+	dbus_error_init(&err);
+	connection = dbus_bus_get(DBUS_BUS_SYSTEM, &err);
+	if (!connection) {
+		NOTIFICATION_ERR("Fail to dbus_bus_get");
+		return NOTIFICATION_ERROR_FROM_DBUS;
+	}
+
+	signal =
+	    dbus_message_new_signal(PATH_NAME, INTERFACE_NAME,
+				    MEMBER_NAME);
+	if (!signal) {
+		NOTIFICATION_ERR("Fail to dbus_message_new_signal");
+		return NOTIFICATION_ERROR_FROM_DBUS;
+	}
+
+	ret = dbus_message_append_args(signal,
+					   DBUS_TYPE_STRING, &message,
+					   DBUS_TYPE_INVALID);
+	if (ret) {
+		ret = dbus_connection_send(connection, signal, NULL);
+
+		if (ret) {
+			dbus_connection_flush(connection);
+		}
+	}
+
+	dbus_message_unref(signal);
+	dbus_connection_unref(connection);
+
+	return NOTIFICATION_ERROR_NONE;
+}
+
+

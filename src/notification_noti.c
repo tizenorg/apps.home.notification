@@ -27,16 +27,19 @@
 #include <Ecore.h>
 #include <Elementary.h>
 #include <Eina.h>
+#include <pkgmgr-info.h>
+#include <package_manager.h>
 
 #include <notification.h>
 #include <notification_db.h>
+#include <notification_list.h>
 #include <notification_noti.h>
 #include <notification_debug.h>
 #include <notification_private.h>
+#include <notification_setting.h>
+#include <notification_setting_internal.h>
 
 #define NOTI_BURST_DELETE_UNIT 10
-static Eina_List *toast_list;
-static Eina_List *toast_popup;
 
 static void __free_and_set(void **target_ptr, void *new_ptr) {
 	if (target_ptr != NULL) {
@@ -185,6 +188,7 @@ err:
 
 static int _insertion_query_create(notification_h noti, char **query)
 {
+	int i = 0;
 	int b_encode_len = 0;
 	char *args = NULL;
 	char *group_args = NULL;
@@ -193,6 +197,7 @@ static int _insertion_query_create(notification_h noti, char **query)
 	char *b_service_responding = NULL;
 	char *b_service_single_launch = NULL;
 	char *b_service_multi_launch = NULL;
+	char *b_event_handler[NOTIFICATION_EVENT_TYPE_MAX] = { NULL , };
 	char *b_text = NULL;
 	char *b_key = NULL;
 	char *b_format_args = NULL;
@@ -226,6 +231,13 @@ static int _insertion_query_create(notification_h noti, char **query)
 	if (noti->b_service_multi_launch) {
 		bundle_encode(noti->b_service_multi_launch,
 			      (bundle_raw **) & b_service_multi_launch, &b_encode_len);
+	}
+
+	for (i = 0; i < NOTIFICATION_EVENT_TYPE_MAX; i++) {
+		if (noti->b_event_handler[i]) {
+			bundle_encode(noti->b_event_handler[i],
+					(bundle_raw **) & b_event_handler[i], &b_encode_len);
+		}
 	}
 
 	if (noti->b_text) {
@@ -263,9 +275,12 @@ static int _insertion_query_create(notification_h noti, char **query)
 		 "args, group_args, "
 		 "b_execute_option, "
 		 "b_service_responding, b_service_single_launch, b_service_multi_launch, "
+		 "b_event_handler_click_on_button_1, b_event_handler_click_on_button_2, b_event_handler_click_on_button_3, "
+		 "b_event_handler_click_on_button_4, b_event_handler_click_on_button_5, b_event_handler_click_on_button_6, "
+		 "b_event_handler_click_on_icon, b_event_handler_click_on_thumbnail, "
 		 "sound_type, sound_path, vibration_type, vibration_path, led_operation, led_argb, led_on_ms, led_off_ms, "
 		 "flags_for_property, flag_simmode, display_applist, "
-		 "progress_size, progress_percentage) values ("
+		 "progress_size, progress_percentage, ongoing_flag, auto_remove) values ("
 		 "%d, "
 		 "%d, "
 		 "'%s', '%s', "
@@ -278,9 +293,12 @@ static int _insertion_query_create(notification_h noti, char **query)
 		 "'%s', '%s', "
 		 "'%s', "
 		 "'%s', '%s', '%s', "
+		 "'%s', '%s', '%s', "
+		 "'%s', '%s', '%s', "
+		 "'%s', '%s', "
 		 "%d, '%s', %d, '%s', %d, %d, %d, %d,"
 		 "%d, %d, %d, "
-		 "$progress_size, $progress_percentage)",
+		 "$progress_size, $progress_percentage, %d, %d)",
 		 noti->type,
 		 noti->layout,
 		 NOTIFICATION_CHECK_STR(noti->caller_pkgname),
@@ -297,6 +315,14 @@ static int _insertion_query_create(notification_h noti, char **query)
 		 NOTIFICATION_CHECK_STR(b_service_responding),
 		 NOTIFICATION_CHECK_STR(b_service_single_launch),
 		 NOTIFICATION_CHECK_STR(b_service_multi_launch),
+		NOTIFICATION_CHECK_STR(b_event_handler[NOTIFICATION_EVENT_TYPE_CLICK_ON_BUTTON_1]),
+		NOTIFICATION_CHECK_STR(b_event_handler[NOTIFICATION_EVENT_TYPE_CLICK_ON_BUTTON_2]),
+		NOTIFICATION_CHECK_STR(b_event_handler[NOTIFICATION_EVENT_TYPE_CLICK_ON_BUTTON_3]),
+		NOTIFICATION_CHECK_STR(b_event_handler[NOTIFICATION_EVENT_TYPE_CLICK_ON_BUTTON_4]),
+		NOTIFICATION_CHECK_STR(b_event_handler[NOTIFICATION_EVENT_TYPE_CLICK_ON_BUTTON_5]),
+		NOTIFICATION_CHECK_STR(b_event_handler[NOTIFICATION_EVENT_TYPE_CLICK_ON_BUTTON_6]),
+		NOTIFICATION_CHECK_STR(b_event_handler[NOTIFICATION_EVENT_TYPE_CLICK_ON_ICON]),
+		NOTIFICATION_CHECK_STR(b_event_handler[NOTIFICATION_EVENT_TYPE_CLICK_ON_THUMBNAIL]),
 		 noti->sound_type, NOTIFICATION_CHECK_STR(noti->sound_path),
 		 noti->vibration_type,
 		 NOTIFICATION_CHECK_STR(noti->vibration_path),
@@ -304,7 +330,9 @@ static int _insertion_query_create(notification_h noti, char **query)
 		 noti->led_argb,
 		 noti->led_on_ms,
 		 noti->led_off_ms,
-		 noti->flags_for_property, flag_simmode, noti->display_applist);
+		 noti->flags_for_property, flag_simmode, noti->display_applist,
+		 noti->ongoing_flag,
+		 noti->auto_remove);
 
 	/* Free decoded data */
 	if (args) {
@@ -351,6 +379,7 @@ static int _insertion_query_create(notification_h noti, char **query)
 
 static int _update_query_create(notification_h noti, char **query)
 {
+	int i = 0;
 	int b_encode_len = 0;
 	char *args = NULL;
 	char *group_args = NULL;
@@ -359,6 +388,7 @@ static int _update_query_create(notification_h noti, char **query)
 	char *b_service_responding = NULL;
 	char *b_service_single_launch = NULL;
 	char *b_service_multi_launch = NULL;
+	char *b_event_handler[NOTIFICATION_EVENT_TYPE_MAX] = { NULL , };
 	char *b_text = NULL;
 	char *b_key = NULL;
 	char *b_format_args = NULL;
@@ -392,6 +422,13 @@ static int _update_query_create(notification_h noti, char **query)
 	if (noti->b_service_multi_launch) {
 		bundle_encode(noti->b_service_multi_launch,
 			      (bundle_raw **) & b_service_multi_launch, &b_encode_len);
+	}
+
+	for (i = 0; i < NOTIFICATION_EVENT_TYPE_MAX; i++) {
+		if (noti->b_event_handler[i]) {
+			bundle_encode(noti->b_event_handler[i],
+					(bundle_raw **) & b_event_handler[i], &b_encode_len);
+		}
 	}
 
 	if (noti->b_text) {
@@ -430,13 +467,22 @@ static int _update_query_create(notification_h noti, char **query)
 		 "b_service_responding = '%s', "
 		 "b_service_single_launch = '%s', "
 		 "b_service_multi_launch = '%s', "
+		 "b_event_handler_click_on_button_1 = '%s', "
+		 "b_event_handler_click_on_button_2= '%s', "
+		 "b_event_handler_click_on_button_3= '%s', "
+		 "b_event_handler_click_on_button_4= '%s', "
+		 "b_event_handler_click_on_button_5= '%s', "
+		 "b_event_handler_click_on_button_6= '%s', "
+		 "b_event_handler_click_on_icon= '%s', "
+		 "b_event_handler_click_on_thumbnail= '%s', "
 		 "sound_type = %d, sound_path = '%s', "
 		 "vibration_type = %d, vibration_path = '%s', "
 		 "led_operation = %d, led_argb = %d, "
 		 "led_on_ms = %d, led_off_ms = %d, "
 		 "flags_for_property = %d, flag_simmode = %d, "
 		 "display_applist = %d, "
-		 "progress_size = $progress_size, progress_percentage = $progress_percentage "
+		 "progress_size = $progress_size, progress_percentage = $progress_percentage, "
+		 "ongoing_flag = %d, auto_remove = %d "
 		 "where priv_id = %d ",
 		 noti->type,
 		 noti->layout,
@@ -452,6 +498,14 @@ static int _update_query_create(notification_h noti, char **query)
 		 NOTIFICATION_CHECK_STR(b_service_responding),
 		 NOTIFICATION_CHECK_STR(b_service_single_launch),
 		 NOTIFICATION_CHECK_STR(b_service_multi_launch),
+		NOTIFICATION_CHECK_STR(b_event_handler[NOTIFICATION_EVENT_TYPE_CLICK_ON_BUTTON_1]),
+		NOTIFICATION_CHECK_STR(b_event_handler[NOTIFICATION_EVENT_TYPE_CLICK_ON_BUTTON_2]),
+		NOTIFICATION_CHECK_STR(b_event_handler[NOTIFICATION_EVENT_TYPE_CLICK_ON_BUTTON_3]),
+		NOTIFICATION_CHECK_STR(b_event_handler[NOTIFICATION_EVENT_TYPE_CLICK_ON_BUTTON_4]),
+		NOTIFICATION_CHECK_STR(b_event_handler[NOTIFICATION_EVENT_TYPE_CLICK_ON_BUTTON_5]),
+		NOTIFICATION_CHECK_STR(b_event_handler[NOTIFICATION_EVENT_TYPE_CLICK_ON_BUTTON_6]),
+		NOTIFICATION_CHECK_STR(b_event_handler[NOTIFICATION_EVENT_TYPE_CLICK_ON_ICON]),
+		NOTIFICATION_CHECK_STR(b_event_handler[NOTIFICATION_EVENT_TYPE_CLICK_ON_THUMBNAIL]),
 		 noti->sound_type, NOTIFICATION_CHECK_STR(noti->sound_path),
 		 noti->vibration_type,
 		 NOTIFICATION_CHECK_STR(noti->vibration_path),
@@ -460,6 +514,7 @@ static int _update_query_create(notification_h noti, char **query)
 		 noti->led_on_ms,
 		 noti->led_off_ms,
 		 noti->flags_for_property, flag_simmode, noti->display_applist,
+		 noti->ongoing_flag, noti->auto_remove,
 		 noti->priv_id);
 
 	/* Free decoded data */
@@ -506,6 +561,7 @@ static int _update_query_create(notification_h noti, char **query)
 
 static void _notification_noti_populate_from_stmt(sqlite3_stmt * stmt, notification_h noti) {
 	int col = 0;
+	int i = 0;
 
 	if (stmt == NULL || noti == NULL) {
 		return ;
@@ -540,6 +596,10 @@ static void _notification_noti_populate_from_stmt(sqlite3_stmt * stmt, notificat
 	noti->b_service_multi_launch =
 	    notification_db_column_bundle(stmt, col++);
 
+	for (i = 0; i < NOTIFICATION_EVENT_TYPE_MAX; i++) {
+		noti->b_event_handler[i] = notification_db_column_bundle(stmt, col++);
+	}
+
 	noti->sound_type = sqlite3_column_int(stmt, col++);
 	__free_and_set((void **)&(noti->sound_path), notification_db_column_text(stmt, col++));
 	noti->vibration_type = sqlite3_column_int(stmt, col++);
@@ -553,6 +613,9 @@ static void _notification_noti_populate_from_stmt(sqlite3_stmt * stmt, notificat
 	noti->display_applist = sqlite3_column_int(stmt, col++);
 	noti->progress_size = sqlite3_column_double(stmt, col++);
 	noti->progress_percentage = sqlite3_column_double(stmt, col++);
+
+	noti->ongoing_flag = sqlite3_column_int(stmt, col++);
+	noti->auto_remove = sqlite3_column_int(stmt, col++);
 
 	noti->app_icon_path = NULL;
 	noti->app_name = NULL;
@@ -659,6 +722,183 @@ err:
 	return ret;
 }
 
+
+static int _get_package_id_by_app_id(const char *app_id, char **package_id)
+{
+	int err = NOTIFICATION_ERROR_NONE;
+	int retval;
+	char *pkg_id = NULL;
+	char *pkg_id_dup = NULL;
+	pkgmgrinfo_appinfo_h pkgmgrinfo_appinfo = NULL;
+
+	if (app_id == NULL || package_id == NULL) {
+		NOTIFICATION_ERR("NOTIFICATION_ERROR_INVALID_PARAMETER");
+		err = NOTIFICATION_ERROR_INVALID_PARAMETER;
+		goto out;
+	}
+
+	if ((retval = pkgmgrinfo_appinfo_get_appinfo(app_id, &pkgmgrinfo_appinfo)) != PMINFO_R_OK) {
+		NOTIFICATION_ERR("pkgmgrinfo_appinfo_get_appinfo failed [%d]", retval);
+		err = NOTIFICATION_ERROR_INVALID_OPERATION;
+		goto out;
+	}
+
+	if ((retval = pkgmgrinfo_appinfo_get_pkgname(pkgmgrinfo_appinfo, &pkg_id)) != PMINFO_R_OK || pkg_id == NULL) {
+		NOTIFICATION_ERR("pkgmgrinfo_appinfo_get_pkgname failed [%d]", retval);
+		err = NOTIFICATION_ERROR_INVALID_OPERATION;
+		goto out;
+	}
+
+	pkg_id_dup = strdup(pkg_id);
+
+	if (pkg_id_dup == NULL) {
+		NOTIFICATION_ERR("strdup failed");
+		err = NOTIFICATION_ERROR_OUT_OF_MEMORY;
+		goto out;
+	}
+
+	*package_id = pkg_id_dup;
+
+out:
+	if (pkgmgrinfo_appinfo)
+		pkgmgrinfo_appinfo_destroy_appinfo(pkgmgrinfo_appinfo);
+
+	return err;
+}
+
+static bool _is_allowed_to_notify(const char *caller_package_name)
+{
+	notification_setting_h setting = NULL;
+	int err;
+	char *package_id = NULL;
+	bool ret = true;
+
+	err = notification_setting_get_setting_by_package_name(caller_package_name, &setting);
+	if (err != NOTIFICATION_ERROR_NONE) {
+		/* Retry with package id */
+		err = _get_package_id_by_app_id (caller_package_name, &package_id);
+
+		if (err != NOTIFICATION_ERROR_NONE || package_id == NULL) {
+			NOTIFICATION_ERR("_get_package_id_by_app_id failed [%d]", err);
+			goto out;
+		}
+		else {
+			err = notification_setting_get_setting_by_package_name(package_id, &setting);
+			if (err != NOTIFICATION_ERROR_NONE) {
+				NOTIFICATION_ERR("notification_setting_get_setting_by_package_name failed [%d]", err);
+				goto out;
+			}
+		}
+	}
+
+	err = notification_setting_get_allow_to_notify(setting, &ret);
+	if (err != NOTIFICATION_ERROR_NONE) {
+		NOTIFICATION_ERR("notification_setting_get_allow_to_notify failed [%d]", err);
+		goto out;
+	}
+
+	if (ret != true) {
+		NOTIFICATION_DBG("[%s] is not allowed to notify", caller_package_name);
+	}
+
+out:
+	if (package_id) {
+		free(package_id);
+	}
+
+	if (setting) {
+		notification_setting_free_notification(setting);
+	}
+
+	return ret;
+}
+
+static int _handle_do_not_disturb_option(notification_h noti)
+{
+	int err = NOTIFICATION_ERROR_NONE;
+	bool do_not_disturb = false;
+	bool do_not_disturb_exception = false;
+	char *package_id = NULL;
+	notification_system_setting_h system_setting = NULL;
+	notification_setting_h setting = NULL;
+
+	if (noti == NULL) {
+		NOTIFICATION_ERR("NOTIFICATION_ERROR_INVALID_PARAMETER");
+		err = NOTIFICATION_ERROR_INVALID_PARAMETER;
+		goto out;
+	}
+
+	/* Get system setting */
+	if ((err = notification_system_setting_load_system_setting(&system_setting)) != NOTIFICATION_ERROR_NONE) {
+		NOTIFICATION_ERR("notification_system_setting_load_system_setting failed [%d]", err);
+		goto out;
+	}
+
+	if ((err = notification_system_setting_get_do_not_disturb(system_setting, &do_not_disturb)) != NOTIFICATION_ERROR_NONE) {
+		NOTIFICATION_ERR("notification_system_setting_get_do_not_disturb failed [%d]", err);
+		goto out;
+	}
+
+	NOTIFICATION_DBG("do_not_disturb [%d]", do_not_disturb);
+
+	if (do_not_disturb) {
+		/* Check exception option of the caller package */
+		err = notification_setting_get_setting_by_package_name(noti->caller_pkgname, &setting);
+
+		if (err != NOTIFICATION_ERROR_NONE) {
+			/* Retry with package id */
+			err = _get_package_id_by_app_id (noti->caller_pkgname, &package_id);
+
+			if (err != NOTIFICATION_ERROR_NONE || package_id == NULL) {
+				NOTIFICATION_ERR("_get_package_id_by_app_id failed [%d]", err);
+				goto out;
+			}
+			else {
+				err = notification_setting_get_setting_by_package_name(package_id, &setting);
+				if (err != NOTIFICATION_ERROR_NONE) {
+					NOTIFICATION_ERR("notification_setting_get_setting_by_package_name failed [%d]", err);
+					goto out;
+				}
+			}
+		}
+
+		err = notification_setting_get_do_not_disturb_except(setting, &do_not_disturb_exception);
+		if (err != NOTIFICATION_ERROR_NONE) {
+			NOTIFICATION_ERR("notification_setting_get_allow_to_notify failed [%d]", err);
+			goto out;
+		}
+
+		if (do_not_disturb_exception == false) {
+			/* do_not_disturb is ON and do_not_disturb_exception is OFF */
+			/* Then add this notification only on quick panel and indicator*/
+			noti->display_applist = noti->display_applist & (NOTIFICATION_DISPLAY_APP_NOTIFICATION_TRAY | NOTIFICATION_DISPLAY_APP_INDICATOR);
+			/* and reset all sound and vibration and led options*/
+			noti->sound_type = NOTIFICATION_SOUND_TYPE_NONE;
+			SAFE_FREE(noti->sound_path);
+			noti->vibration_type = NOTIFICATION_VIBRATION_TYPE_NONE;
+			SAFE_FREE(noti->vibration_path);
+			noti->led_operation = NOTIFICATION_LED_OP_OFF;
+			noti->led_argb = 0;
+			noti->led_on_ms = 0;
+			noti->led_off_ms = 0;
+		}
+
+	}
+
+out:
+	SAFE_FREE(package_id);
+
+	if (system_setting) {
+		notification_system_setting_free_system_setting(system_setting);
+	}
+
+	if (setting) {
+		notification_setting_free_notification(setting);
+	}
+
+	return err;
+}
+
 EXPORT_API int notification_noti_insert(notification_h noti)
 {
 	int ret = 0;
@@ -666,7 +906,21 @@ EXPORT_API int notification_noti_insert(notification_h noti)
 	sqlite3_stmt *stmt = NULL;
 	char *query = NULL;
 	char buf_key[32] = { 0, };
-	const char *title_key = NULL;
+	char *title_key = NULL;
+
+	if (noti == NULL) {
+		NOTIFICATION_ERR("NOTIFICATION_ERROR_INVALID_PARAMETER");
+		return NOTIFICATION_ERROR_INVALID_PARAMETER;
+	}
+
+	if (_is_allowed_to_notify((const char*)noti->caller_pkgname) == false) {
+		NOTIFICATION_DBG("[%s] is not allowed to notify", noti->caller_pkgname);
+		return NOTIFICATION_ERROR_PERMISSION_DENIED;
+	}
+
+	if (_handle_do_not_disturb_option(noti) != NOTIFICATION_ERROR_NONE) {
+		NOTIFICATION_WARN("_handle_do_not_disturb_option failed");
+	}
 
 	/* Open DB */
 	db = notification_db_open(DBPATH);
@@ -699,14 +953,14 @@ EXPORT_API int notification_noti_insert(notification_h noti)
 		snprintf(buf_key, sizeof(buf_key), "%d",
 			 NOTIFICATION_TEXT_TYPE_TITLE);
 
-		title_key = bundle_get_val(noti->b_key, buf_key);
+		bundle_get_str(noti->b_key, buf_key, &title_key);
 	}
 
 	if (title_key == NULL && noti->b_text != NULL) {
 		snprintf(buf_key, sizeof(buf_key), "%d",
 			 NOTIFICATION_TEXT_TYPE_TITLE);
 
-		title_key = bundle_get_val(noti->b_text, buf_key);
+		bundle_get_str(noti->b_text, buf_key, &title_key);
 	}
 
 	if (title_key == NULL) {
@@ -792,8 +1046,11 @@ int notification_noti_get_by_priv_id(notification_h noti, char *pkgname, int pri
 			 "tag, b_text, b_key, b_format_args, num_format_args, "
 			 "text_domain, text_dir, time, insert_time, args, group_args, "
 			 "b_execute_option, b_service_responding, b_service_single_launch, b_service_multi_launch, "
+			 "b_event_handler_click_on_button_1, b_event_handler_click_on_button_2, b_event_handler_click_on_button_3, "
+			 "b_event_handler_click_on_button_4, b_event_handler_click_on_button_5, b_event_handler_click_on_button_6, "
+			 "b_event_handler_click_on_icon, b_event_handler_click_on_thumbnail, "
 			 "sound_type, sound_path, vibration_type, vibration_path, led_operation, led_argb, led_on_ms, led_off_ms, "
-			 "flags_for_property, display_applist, progress_size, progress_percentage "
+			 "flags_for_property, display_applist, progress_size, progress_percentage, ongoing_flag, auto_remove "
 			 "from noti_list ";
 
 	if (pkgname != NULL) {
@@ -863,8 +1120,11 @@ EXPORT_API int notification_noti_get_by_tag(notification_h noti, char *pkgname, 
 			 "tag, b_text, b_key, b_format_args, num_format_args, "
 			 "text_domain, text_dir, time, insert_time, args, group_args, "
 			 "b_execute_option, b_service_responding, b_service_single_launch, b_service_multi_launch, "
+			 "b_event_handler_click_on_button_1, b_event_handler_click_on_button_2, b_event_handler_click_on_button_3, "
+			 "b_event_handler_click_on_button_4, b_event_handler_click_on_button_5, b_event_handler_click_on_button_6, "
+			 "b_event_handler_click_on_icon, b_event_handler_click_on_thumbnail, "
 			 "sound_type, sound_path, vibration_type, vibration_path, led_operation, led_argb, led_on_ms, led_off_ms, "
-			 "flags_for_property, display_applist, progress_size, progress_percentage "
+			 "flags_for_property, display_applist, progress_size, progress_percentage, ongoing_flag, auto_remove "
 			 "from noti_list where caller_pkgname = ? and tag = ?", -1, &stmt, NULL);
 		if (ret != SQLITE_OK) {
 			NOTIFICATION_ERR("Error: %s\n", sqlite3_errmsg(db));
@@ -888,8 +1148,11 @@ EXPORT_API int notification_noti_get_by_tag(notification_h noti, char *pkgname, 
 			 "tag, b_text, b_key, b_format_args, num_format_args, "
 			 "text_domain, text_dir, time, insert_time, args, group_args, "
 			 "b_execute_option, b_service_responding, b_service_single_launch, b_service_multi_launch, "
+			 "b_event_handler_click_on_button_1, b_event_handler_click_on_button_2, b_event_handler_click_on_button_3, "
+			 "b_event_handler_click_on_button_4, b_event_handler_click_on_button_5, b_event_handler_click_on_button_6, "
+			 "b_event_handler_click_on_icon, b_event_handler_click_on_thumbnail, "
 			 "sound_type, sound_path, vibration_type, vibration_path, led_operation, led_argb, led_on_ms, led_off_ms, "
-			 "flags_for_property, display_applist, progress_size, progress_percentage "
+			 "flags_for_property, display_applist, progress_size, progress_percentage, ongoing_flag, auto_remove "
 			 "from noti_list where  tag = ?", -1, &stmt, NULL);
 		if (ret != SQLITE_OK) {
 			NOTIFICATION_ERR("Error: %s\n", sqlite3_errmsg(db));
@@ -910,6 +1173,7 @@ EXPORT_API int notification_noti_get_by_tag(notification_h noti, char *pkgname, 
 	} else {
 		ret = NOTIFICATION_ERROR_FROM_DB;
 	}
+
 err:
 
 	if (stmt) {
@@ -935,6 +1199,15 @@ EXPORT_API int notification_noti_update(notification_h noti)
 	db = notification_db_open(DBPATH);
 	if (!db) {
 		return get_last_result();
+	}
+
+	if (_is_allowed_to_notify((const char*)noti->caller_pkgname) == false) {
+		NOTIFICATION_DBG("[%s] is not allowed to notify", noti->caller_pkgname);
+		return NOTIFICATION_ERROR_PERMISSION_DENIED;
+	}
+
+	if (_handle_do_not_disturb_option(noti) != NOTIFICATION_ERROR_NONE) {
+		NOTIFICATION_WARN("_handle_do_not_disturb_option failed");
 	}
 
 	/* Check private ID is exist */
@@ -1058,7 +1331,7 @@ EXPORT_API int notification_noti_delete_all(notification_type_e type, const char
 				if (tmp) {
 					*list_deleted_rowid = tmp;
 				} else {
-					NOTIFICATION_ERR("Heap: %d\n", errno);
+					NOTIFICATION_ERR("Heap: %s\n", strerror(errno));
 					/*!
 					 * \TODO
 					 * How can I handle this?
@@ -1522,8 +1795,11 @@ int notification_noti_get_grouping_list(notification_type_e type,
 		 "tag, b_text, b_key, b_format_args, num_format_args, "
 		 "text_domain, text_dir, time, insert_time, args, group_args, "
 		 "b_execute_option, b_service_responding, b_service_single_launch, b_service_multi_launch, "
+		 "b_event_handler_click_on_button_1, b_event_handler_click_on_button_2, b_event_handler_click_on_button_3, "
+		 "b_event_handler_click_on_button_4, b_event_handler_click_on_button_5, b_event_handler_click_on_button_6, "
+		 "b_event_handler_click_on_icon, b_event_handler_click_on_thumbnail, "
 		 "sound_type, sound_path, vibration_type, vibration_path, led_operation, led_argb, led_on_ms, led_off_ms, "
-		 "flags_for_property, display_applist, progress_size, progress_percentage "
+		 "flags_for_property, display_applist, progress_size, progress_percentage, ongoing_flag, auto_remove "
 		 "from noti_list ");
 
 	if (status == VCONFKEY_TELEPHONY_SIM_INSERTED) {
@@ -1625,8 +1901,11 @@ int notification_noti_get_detail_list(const char *pkgname,
 		 "tag, b_text, b_key, b_format_args, num_format_args, "
 		 "text_domain, text_dir, time, insert_time, args, group_args, "
 		 "b_execute_option, b_service_responding, b_service_single_launch, b_service_multi_launch, "
+		 "b_event_handler_click_on_button_1, b_event_handler_click_on_button_2, b_event_handler_click_on_button_3, "
+		 "b_event_handler_click_on_button_4, b_event_handler_click_on_button_5, b_event_handler_click_on_button_6, "
+		 "b_event_handler_click_on_icon, b_event_handler_click_on_thumbnail, "
 		 "sound_type, sound_path, vibration_type, vibration_path, led_operation, led_argb, led_on_ms, led_off_ms, "
-		 "flags_for_property, display_applist, progress_size, progress_percentage "
+		 "flags_for_property, display_applist, progress_size, progress_percentage, ongoing_flag, auto_remove "
 		 "from noti_list ");
 
 	if (priv_id == NOTIFICATION_PRIV_ID_NONE && group_id == NOTIFICATION_GROUP_ID_NONE) {
@@ -1738,22 +2017,6 @@ EXPORT_API int notification_noti_check_tag(notification_h noti)
 		goto err;
 	}
 
-/*
-	query = sqlite3_mprintf("select priv_id from noti_list where caller_pkgname = '%s' and tag = '%s'",
-		 noti->caller_pkgname, noti->tag);
-	if (query == NULL) {
-		ret = NOTIFICATION_ERROR_OUT_OF_MEMORY;
-		goto err;
-	}
-
-	ret = sqlite3_prepare(db, query, strlen(query), &stmt, NULL);
-	if (ret != SQLITE_OK) {
-		NOTIFICATION_ERR("Get priv id DB err(%d) : %s", ret,
-				 sqlite3_errmsg(db));
-		ret = NOTIFICATION_ERROR_FROM_DB;
-		goto err;
-	}
-*/
 	ret = sqlite3_step(stmt);
 	if (ret == SQLITE_ROW) {
 		result = sqlite3_column_int(stmt, 0);
@@ -1774,141 +2037,4 @@ EXPORT_API int notification_noti_check_tag(notification_h noti)
 err:
 
 	return ret;
-}
-
-static void
-popup_timeout_cb(void *data, Evas_Object *obj, void *event_info)
-{
-	Eina_List *list = NULL;
-	char *msg = NULL;
-	int count = 0;
-
-	evas_object_del(toast_popup);
-	toast_popup = NULL;
-	evas_object_del((Evas_Object *)data);
-
-	count = eina_list_count(toast_list);
-
-	if (count == 1){
-		msg = (char *)eina_list_data_get(toast_list);
-		free(msg);
-
-		eina_list_free(toast_list);
-		toast_list = NULL;
-	} else if (count > 1) {
-		msg = (char *)eina_list_data_get(toast_list);
-		toast_list = eina_list_remove(toast_list, msg);
-		free(msg);
-		_post_toast_message((char *)eina_list_data_get(toast_list));
-	}
-}
-
-int _post_toast_message(char *message)
-{
-	int let = 0;
-	Evas_Object *toast_window;
-	Evas *e;
-	Ecore_Evas *ee;
-	double scale = elm_config_scale_get();
-
-
-	toast_window = elm_win_add(NULL, "toast", ELM_WIN_BASIC);
-
-	elm_win_alpha_set(toast_window, EINA_TRUE);
-	elm_win_title_set(toast_window, "toast");
-
-	elm_win_indicator_mode_set(toast_window, ELM_WIN_INDICATOR_SHOW);
-	elm_win_indicator_type_set(toast_window,ELM_WIN_INDICATOR_TYPE_1);
-
-	//elm_win_autodel_set(toast_win, EINA_TRUE);
-	if (elm_win_wm_rotation_supported_get(toast_window)) {
-		int rots[4] = { 0, 90, 180, 270 };
-		elm_win_wm_rotation_available_rotations_set(toast_window, (const int*)(&rots), 4);
-	}
-
-	e = evas_object_evas_get(toast_window);
-	ee = ecore_evas_ecore_evas_get(e);
-	ecore_evas_name_class_set(ee, "TOAST_POPUP", "SYSTEM_POPUP");
-
-	evas_object_resize(toast_window, (480 * scale), (650 * scale));
-	ecore_x_window_shape_input_rectangle_set(elm_win_xwindow_get(toast_window), 0, 0, (480 * scale), (650 * scale));
-
-	toast_popup = elm_popup_add(toast_window);
-
-	elm_object_style_set(toast_popup, "toast");
-	evas_object_size_hint_weight_set(toast_popup, EVAS_HINT_EXPAND, EVAS_HINT_EXPAND);
-
-	elm_object_part_text_set(toast_popup,"elm.text", message);
-
-	if (eina_list_count(toast_list) != 1) {
-		elm_popup_timeout_set(toast_popup, 1.0);
-	}
-	else {
-		elm_popup_timeout_set(toast_popup, 3.0);
-	}
-	evas_object_smart_callback_add(toast_popup, "timeout", popup_timeout_cb, (void *)toast_window);
-
-	elm_win_prop_focus_skip_set(toast_window, EINA_TRUE);
-
-	evas_object_show(toast_window);
-	evas_object_show(toast_popup);
-
-	return 0;
-}
-
-EXPORT_API int notification_noti_post_toast_message(const char *message)
-{
-	int let = 0;
-	char *msg = NULL;
-	char *temp_string = NULL;
-	int count = 0;
-
-	msg = (char *)calloc(strlen(message) + 1, sizeof(char));
-
-	if (msg == NULL) {
-		return NOTIFICATION_ERROR_OUT_OF_MEMORY;
-	}
-
-	strncpy(msg, message, strlen(message) + 1);
-
-/*
-	if (eina_list_count(toast_list) == 10) {
-		toast_list = eina_list_last(toast_list);
-		eina_list_data_set(toast_list, msg);
-		toast_list = eina_list_nth_list(toast_list, 0);
-	}
-	else {
-*/
-
-	count = eina_list_count(toast_list);
-	if (count == 0) {
-		toast_list = eina_list_append(toast_list, msg);
-		let = _post_toast_message(msg);
-	}
-	else if (count == 1) {
-		temp_string = (char*)eina_list_nth(toast_list, count - 1);
-		if (temp_string == NULL)
-			return 0;
-		if (strcmp(msg, temp_string) == 0) {
-			elm_popup_timeout_set(toast_popup, 3.0);
-		}
-		else {
-			toast_list = eina_list_append(toast_list, msg);
-			elm_popup_timeout_set(toast_popup, 1.0);
-		}
-	}
-	else if (count >= 2) {
-		temp_string = (char*)eina_list_nth(toast_list, count - 1);
-		if (temp_string == NULL)
-			return 0;
-		if (strcmp(msg, temp_string) == 0) {
-			free(msg);
-			return 0;
-		}
-		else {
-			toast_list = eina_list_append(toast_list, msg);
-		}
-	}
-
-	return 0;
 }

@@ -23,14 +23,9 @@ SET(TEST-APP-SRCS
 	${CMAKE_SOURCE_DIR}/test-app/main.c
 )
 
-IF (TIZEN_WEARABLE)
-INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/include
-	${CMAKE_SOURCE_DIR}/include/wearable)
-ENDIF (TIZEN_WEARABLE)
-IF (TIZEN_MOBILE)
-INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/include
-	${CMAKE_SOURCE_DIR}/include/mobile)
-ENDIF (TIZEN_MOBILE)
+INCLUDE_DIRECTORIES(
+	${CMAKE_SOURCE_DIR}/include
+)
 
 INCLUDE(FindPkgConfig)
 pkg_check_modules(test_app_pkgs REQUIRED glib-2.0 gthread-2.0 vconf appsvc capi-appfw-application)
@@ -40,7 +35,7 @@ FOREACH(flag ${test_app_pkgs_CFLAGS})
 ENDFOREACH(flag)
 
 SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${EXTRA_CFLAGS}")
-SET(CMAKE_EXE_LINKER_FLAGS "-Wl,--as-needed -pie ")
+SET(CMAKE_EXE_LINKER_FLAGS "-Wl,--as-needed -pie")
 
 ADD_EXECUTABLE(notification-test-app ${TEST-APP-SRCS})
 TARGET_LINK_LIBRARIES(notification-test-app ${test_app_pkgs_LDFLAGS} notification)
