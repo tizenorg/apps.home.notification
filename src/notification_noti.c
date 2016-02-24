@@ -725,45 +725,35 @@ err:
 
 static int _get_package_id_by_app_id(const char *app_id, char **package_id)
 {
-	int err = NOTIFICATION_ERROR_NONE;
+	pkgmgrinfo_appinfo_h pkgmgrinfo_appinfo;
 	int retval;
 	char *pkg_id = NULL;
 	char *pkg_id_dup = NULL;
-	pkgmgrinfo_appinfo_h pkgmgrinfo_appinfo = NULL;
-
-	if (app_id == NULL || package_id == NULL) {
-		NOTIFICATION_ERR("NOTIFICATION_ERROR_INVALID_PARAMETER");
-		err = NOTIFICATION_ERROR_INVALID_PARAMETER;
-		goto out;
-	}
 
 	if ((retval = pkgmgrinfo_appinfo_get_appinfo(app_id, &pkgmgrinfo_appinfo)) != PMINFO_R_OK) {
 		NOTIFICATION_ERR("pkgmgrinfo_appinfo_get_appinfo failed [%d]", retval);
-		err = NOTIFICATION_ERROR_INVALID_OPERATION;
-		goto out;
+		return NOTIFICATION_ERROR_INVALID_OPERATION;
 	}
 
-	if ((retval = pkgmgrinfo_appinfo_get_pkgname(pkgmgrinfo_appinfo, &pkg_id)) != PMINFO_R_OK || pkg_id == NULL) {
+	retval = pkgmgrinfo_appinfo_get_pkgname(pkgmgrinfo_appinfo, &pkg_id);
+
+	if (retval != PMINFO_R_OK || pkg_id == NULL) {
 		NOTIFICATION_ERR("pkgmgrinfo_appinfo_get_pkgname failed [%d]", retval);
-		err = NOTIFICATION_ERROR_INVALID_OPERATION;
-		goto out;
+		return NOTIFICATION_ERROR_INVALID_OPERATION;
 	}
 
 	pkg_id_dup = strdup(pkg_id);
 
 	if (pkg_id_dup == NULL) {
-		NOTIFICATION_ERR("strdup failed");
-		err = NOTIFICATION_ERROR_OUT_OF_MEMORY;
-		goto out;
+		pkgmgrinfo_appinfo_destroy_appinfo(pkgmgrinfo_appinfo);
+		return NOTIFICATION_ERROR_OUT_OF_MEMORY;
 	}
 
 	*package_id = pkg_id_dup;
 
-out:
-	if (pkgmgrinfo_appinfo)
-		pkgmgrinfo_appinfo_destroy_appinfo(pkgmgrinfo_appinfo);
+	pkgmgrinfo_appinfo_destroy_appinfo(pkgmgrinfo_appinfo);
 
-	return err;
+	return NOTIFICATION_ERROR_NONE;
 }
 
 static bool _is_allowed_to_notify(const char *caller_package_name)

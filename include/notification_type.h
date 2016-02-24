@@ -60,8 +60,7 @@ typedef enum _notification_ly_type {
 	NOTIFICATION_LY_NOTI_THUMBNAIL,
         /**< Layout for notification. Used to display images*/
 	NOTIFICATION_LY_ONGOING_EVENT,
-        /**< Layout for ongoing notification. Used to display text message.
-         * notifications with NOTIFICATION_LY_ONGOING_EVENT can not be protected from removing by user since tizen 2.4 */
+        /**< Layout for ongoing notification. Used to display text message*/
 	NOTIFICATION_LY_ONGOING_PROGRESS,
         /**< Layout for ongoing notification. Used to display progress*/
 	NOTIFICATION_LY_MAX,

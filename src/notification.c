@@ -1713,8 +1713,7 @@ static notification_h _notification_create(notification_type_e type)
 	err_app_manager = package_info_create(noti->caller_pkgname, &package_info);
 
 	if (err_app_manager != PACKAGE_MANAGER_ERROR_NONE || package_info == NULL) {
-		NOTIFICATION_WARN("package_info_create failed err[%d] package_info[%p] caller_pkgname[%s]",
-				err_app_manager, package_info, noti->caller_pkgname);
+		NOTIFICATION_WARN("package_info_create failed err[%d] package_info[%p]", err_app_manager, package_info);
 		goto out;
 	}
 

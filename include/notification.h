@@ -1070,7 +1070,7 @@ int notification_delete(notification_h noti);
  * @brief Creates internal structure data and returns a notification handle.
  * @details Available type is #NOTIFICATION_TYPE_NOTI and #NOTIFICATION_TYPE_ONGOING.
  * #NOTIFICATION_TYPE_NOTI is remaining notification data even if device is restarted.
- * #NOTIFICATION_TYPE_ONGOING can display progress on a notification with #NOTIFICATION_LY_ONGOING_PROGRESS layout.
+ * #NOTIFICATION_TYPE_ONGOING can display progressive feather, but notification data is removed after device is restarted.
  * @since_tizen @if WEARABLE 2.3.1 @elseif MOBILE 2.3 @endif
  * @remarks The specific error code can be obtained using the get_last_result() method. Error codes are described in Exception section.
  * @param[in] type The notification type
